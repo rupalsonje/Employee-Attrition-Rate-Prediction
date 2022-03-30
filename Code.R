@@ -6,11 +6,14 @@ library(purrr)
 library(dplyr)
 library(stringr)
 library(forcats)
+library(repr)
 
 attrition.df <- read.csv("C:\\Users\\nikhi\\Downloads\\kaggle\\HR-Employee-Attrition.csv", stringsAsFactors = TRUE)
 str(attrition.df)
 
 head(attrition.df)
+
+options(repr.plot.width=10, repr.plot.height = 10) 
 
 attrition.df %>% 
   select(Attrition) %>%
@@ -20,18 +23,22 @@ attrition.df %>%
 
 summary(attrition.df$EducationField)
 
-library(repr)
-options(repr.plot.width=10, repr.plot.height = 10) 
 ggplot(data=attrition.df)+
   geom_bar(aes(x=EducationField,color=Attrition,fill=Attrition))+
   ggtitle("Field of Education vs Attrition ") + 
   labs(x = "EducationField", y = "Count")
 
+
 attrition.df %>% 
-  select(Attrition,Gender,EducationField) %>%
+  select(Attrition,BusinessTravel) %>%
   filter (Attrition=="Yes") %>%
-  group_by(EducationField,Gender) %>% 
+  group_by(BusinessTravel) %>% 
   summarise(Count=n()) 
+
+ggplot(data=attrition.df)+
+  geom_bar(aes(x=BusinessTravel,color=Attrition,fill=Attrition))+
+  ggtitle("BusinessTravel vs Attrition ") + 
+  labs(x = "BusinessTravel", y = "Count")
 
 attr_new <- attrition.df %>% 
   select(Attrition,Gender,EducationField) %>%
@@ -39,10 +46,36 @@ attr_new <- attrition.df %>%
   group_by(EducationField,Gender) %>% 
   summarise(Count=n()) 
 
+attr_new
+
 ggplot(data=attr_new,aes(x=EducationField,y = Count,color=Gender,fill=Gender))+
   geom_bar(stat="identity", position=position_dodge())+
   ggtitle("Field of Education vs Gender ")+
   labs(x = "EducationField", y = "Count")
+
+attr_new <- attrition.df %>% 
+  select(Attrition,Gender,Department) %>%
+  filter (Attrition=="Yes") %>%
+  group_by(Department,Gender) %>% 
+  summarise(Count=n()) 
+
+attr_new
+
+ggplot(data=attr_new,aes(x=Department,y = Count,color=Gender,fill=Gender))+
+  geom_bar(stat="identity", position=position_dodge())+
+  ggtitle("Department vs Gender ")+
+  labs(x = "Department", y = "Count")
+
+attrition.df %>% 
+  select(Attrition,JobRole) %>%
+  filter (Attrition=="Yes") %>%
+  group_by(JobRole) %>% 
+  summarise(Count=n()) 
+
+ggplot(data=attrition.df)+
+  geom_bar(aes(x=JobRole,color=Attrition,fill=Attrition))+
+  ggtitle("JobRole vs Attrition ") + 
+  labs(x = "JobRole", y = "Count")
 
 attrition.df %>% 
   summarise(Median = median(MonthlyIncome), 
@@ -53,13 +86,26 @@ attrition.df %>%
 ggplot(attrition.df, aes(x=Attrition, y=MonthlyIncome, color=Gender, fill=Gender)) +
   geom_boxplot()
 
+ggplot(attrition.df, aes(x=ï..Age,color=Attrition,fill=Attrition)) +
+  geom_histogram(position="identity", alpha=0.7)+
+  ggtitle("Age vs Attrition")+
+  labs(x = "Age", y = "Count")
+
+
 ggplot(attrition.df, aes(x=MonthlyIncome,color=Attrition,fill=Attrition)) +
   geom_histogram(position="identity", alpha=0.7)+
   ggtitle("Distribution of Monthly Income ")+
   labs(x = "Monthly Income", y = "Count")
 
-ggplot(attrition.df, aes(x=OverTime, y=MonthlyIncome, color=Gender, fill=Gender)) +
-  geom_boxplot()
+ggplot(attrition.df, aes(x=PercentSalaryHike,color=Attrition,fill=Attrition)) +
+  geom_histogram(position="identity", alpha=0.7)+
+  ggtitle("Percentage Salary Hike")+
+  labs(x = "Salary Hike", y = "Count")
+
+ggplot(attrition.df, aes(x=YearsSinceLastPromotion,color=Attrition,fill=Attrition)) +
+  geom_histogram(position="identity", alpha=0.7)+
+  ggtitle("Number of Years Since Last Promotion")+
+  labs(x = "Last Promotion", y = "Count")
 
 
 ### model 1 logistic regression
@@ -97,20 +143,16 @@ summary(logit.reg)
 
 ### Step 5: Generate outcome by comparing predicted probability with the cutoff probability
 logit.reg.pred <- predict(logit.reg, valid.df,  type = "response")
-pred <- ifelse(logit.reg.pred > 0.3, 1, 0)
+pred <- ifelse(logit.reg.pred > 0.4, 1, 0)
+test_actual_Attr <- factor(ifelse(valid.df$Attrition==1,"Yes","No"))
+
+table(pred,test_actual_Attr)
 library(caret)
 confusionMatrix(factor(pred), factor(valid.df$Attrition), positive = "1")
 #5 manual calculation using logit
 
 ###Step 6: Generate ROC curve
 library(pROC)
-logit.reg.pred <- predict(logit.reg, valid.df,  type = "response")
-pred <- ifelse(logit.reg.pred > 0.3, 1, 0)
-
-pred <- factor(ifelse(logit.reg.pred > 0.1,1, 0))
-test_actual_Attr <- factor(ifelse(valid.df$Attrition==1,"Yes","No"))
-table(pred,test_actual_Attr)
-
 
 r <- roc(valid.df$Attrition, logit.reg.pred)
 plot.roc(r)
@@ -158,19 +200,15 @@ summary(logit.reg)
 ### Step 5: Generate outcome by comparing predicted probability with the cutoff probability
 logit.reg.pred <- predict(logit.reg, valid.df,  type = "response")
 pred <- ifelse(logit.reg.pred > 0.3, 1, 0)
+test_actual_Attr <- factor(ifelse(valid.df$Attrition==1,"Yes","No"))
+table(pred,test_actual_Attr)
+
 library(caret)
 confusionMatrix(factor(pred), factor(valid.df$Attrition), positive = "1")
 #5 manual calculation using logit
 
 ###Step 6: Generate ROC curve
 library(pROC)
-logit.reg.pred <- predict(logit.reg, valid.df,  type = "response")
-pred <- ifelse(logit.reg.pred > 0.3, 1, 0)
-#
-pred <- factor(ifelse(logit.reg.pred > 0.2,1, 0))
-test_actual_Attr <- factor(ifelse(valid.df$Attrition==1,"Yes","No"))
-table(pred,test_actual_Attr)
-#
 r <- roc(valid.df$Attrition, logit.reg.pred)
 plot.roc(r)
 
